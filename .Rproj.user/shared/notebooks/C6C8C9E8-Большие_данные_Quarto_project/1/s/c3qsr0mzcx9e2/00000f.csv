@@ -1,0 +1,4 @@
+"0","# 🌍 Шаг 2: объединяем с таблицей аэропортов"
+"0","airport_delays <- avg_delay_by_dest |> "
+"0","  inner_join(airports, by = c(""dest"" = ""faa"")) |> "
+"0","  filter(!is.na(lat) & !is.na(lon))"

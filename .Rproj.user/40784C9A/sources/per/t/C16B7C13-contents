@@ -1,0 +1,147 @@
+---
+title: "Большие_данные_Quarto_project"
+author: 
+- А.Ц. Жалсапов
+format:
+  html:
+    code-fold: true
+    toc: true
+    abstract: |
+      Это аннотация.
+execute:
+  message: false 
+  warning: false
+  echo: true
+editor: visual
+---
+
+## Текст: пример рисунка, см. \@fig-ggplot.
+
+```{r}
+#| label: fig-ggplot
+#| fig-cap: "Демонстрация `ggplot`"
+library(hrbrthemes)
+library(tidyverse)
+
+ggplot(mtcars, aes(mpg, wt)) +
+  geom_point(color = ft_cols$yellow) +
+  geom_smooth() +
+  labs(x = "Экономия топлива (mpg)", 
+       y = "Вес (т)",
+       title = "Пример диаграммы рассеяния",
+       caption = "Источник: hrbrthemes") + 
+  theme_ft_rc()
+```
+
+# Карта пунктуальности аэропортов США
+
+Цель: сравнить средние задержки по аэропортам назначения. Данные: flights, airports Гео: точка каждого аэропорта на карте + цвет/размер круга = средняя задержка. Инструмент: ggplot2 + geom_point() с координатами lat, lon. 💡 Объедините flights$dest с airports$faa для получения координат. 2. География авиакомпаний Цель: отобразить, куда чаще всего летает каждая авиакомпания. Данные: flights, airlines, airports
+
+Гео: карта США с пунктами назначения для каждой авиакомпании.
+
+Фильтруйте по конкретной авиакомпании, чтобы облегчить нагрузку.
+
+```{r}
+library(nycflights23)
+library(dplyr)
+library(ggplot2)
+library(maps)
+```
+
+```{r}
+# Основной датафрейм flights
+data <- flights |> 
+  # Добавим информацию об аэропорте прибытия
+  left_join(airports, by = c("dest" = "faa"), suffix = c("", "_dest"))|> 
+  na.omit()
+
+
+# Просмотр первых строк объединённого датафрейма
+head(data)
+
+
+# 🧮 Шаг 1: рассчитываем среднюю задержку по аэропортам назначения
+avg_delay_by_dest <- data |> 
+  group_by(dest) |> 
+  summarise(avg_arr_delay = mean(arr_delay, na.rm = TRUE),
+            count = n()) |> 
+  filter(count > 100)  # опционально — убрать редкие аэропорты
+```
+
+```{r}
+# 🌍 Шаг 2: объединяем с таблицей аэропортов
+airport_delays <- avg_delay_by_dest |> 
+  inner_join(airports, by = c("dest" = "faa")) |> 
+  filter(!is.na(lat) & !is.na(lon))
+```
+
+```{r}
+# 🗺️ Шаг 3: рисуем карту с задержками
+usa_map <- map_data("state")  # фон карты США
+
+ggplot() +
+  geom_polygon(data = usa_map, aes(x = long, y = lat, group = group),
+               fill = "gray95", color = "white") +
+  geom_point(data = airport_delays,
+             aes(x = lon, y = lat, size = avg_arr_delay, color = avg_arr_delay),
+             alpha = 0.8) +
+  scale_color_gradient2(low = "green", mid = "yellow", high = "red", midpoint = 15,
+                        name = "⏱ Средняя задержка (мин)") +
+  scale_size(range = c(2, 10), name = "Задержка (размер)") +
+  theme_minimal() +
+  coord_fixed(1.3) +
+  labs(
+    title = "📍 Средняя задержка по аэропортам назначения (2023)",
+    subtitle = "Данные: nycflights23",
+    x = "Долгота", y = "Широта"
+  )
+```
+
+```{r}
+# Считаем количество рейсов по каждой авиакомпании и аэропорту назначения
+top_routes <- flights %>%
+  group_by(carrier, dest) %>%
+  summarise(flights_count = n(), .groups = "drop")
+
+# Добавляем полное название авиакомпании
+top_routes <- top_routes %>%
+  left_join(airlines, by = "carrier") %>%
+  left_join(airports, by = c("dest" = "faa")) %>%
+  filter(!is.na(lat) & !is.na(lon))
+
+# ✏️ ЗАДАЙ ИМЯ АВИАКОМПАНИИ
+selected_airline <- "United Air Lines Inc."
+
+# Фильтруем по авиакомпании
+routes_filtered <- top_routes %>%
+  filter(name.x == selected_airline & flights_count > 100)  # убрать редкие направления
+
+# Фон карты США
+usa_map <- map_data("state")
+
+# Строим карту
+ggplot() +
+  geom_polygon(data = usa_map, aes(x = long, y = lat, group = group),
+               fill = "gray95", color = "white") +
+  geom_point(data = routes_filtered,
+             aes(x = lon, y = lat, size = flights_count),
+             color = "steelblue", alpha = 0.7) +
+  scale_size(range = c(2, 10), name = "Кол-во рейсов") +
+  theme_minimal() +
+  coord_fixed(1.3) +
+  labs(
+    title = paste("🛫 География рейсов авиакомпании:", selected_airline),
+    subtitle = "Данные: nycflights23 (2023)",
+    x = "Долгота", y = "Широта"
+  )
+
+
+
+
+
+
+```
+
+
+
+

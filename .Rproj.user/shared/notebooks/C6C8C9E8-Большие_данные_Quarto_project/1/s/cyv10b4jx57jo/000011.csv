@@ -1,0 +1,13 @@
+"0","library(nycflights23)"
+"0","library(dplyr)"
+"0","library(ggplot2)"
+"0","library(maps)"
+"2","
+Присоединяю пакет: ‘maps’
+
+"
+"2","Следующий объект скрыт от ‘package:purrr’:
+
+    map
+
+"

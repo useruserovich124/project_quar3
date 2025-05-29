@@ -1,0 +1,9 @@
+project:
+  title: "Большие_данные_Quarto_project"
+  type: website
+  output-dir: docs
+format:
+  html:
+    theme: cosmo
+
+editor: visual
